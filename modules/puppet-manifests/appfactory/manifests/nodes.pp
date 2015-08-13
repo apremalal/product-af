@@ -550,6 +550,7 @@ $apimgt_http_port     = "9769" # we put this because for minimal deployment we u
   $mailto_smtp_auth   = 'true'
 
 ## Private paas configurations
+  $stratos_version    = "4.1.1"
   $stratos_domain     = "paas.${wso2_env_domain}"
 
 #Private paas IAAS configuration
@@ -946,7 +947,7 @@ node /api-manager/ inherits confignode {
 $server_ip= $ipaddress
 
 class {"apimanager":
-  version            => "1.8.0",
+  version            => "1.9.0",
   offset             => $apim_offset,
   localmember_port   => 4000,
   clustering         => false,
