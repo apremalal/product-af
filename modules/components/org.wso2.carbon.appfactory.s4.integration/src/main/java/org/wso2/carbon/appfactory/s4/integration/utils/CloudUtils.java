@@ -43,6 +43,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.wso2.carbon.appfactory.common.AppFactoryConstants;
 import org.wso2.carbon.appfactory.common.AppFactoryException;
 import org.wso2.carbon.appfactory.core.internal.ServiceHolder;
 import org.wso2.carbon.appfactory.s4.integration.internal.ServiceReferenceHolder;
@@ -256,5 +257,9 @@ public class CloudUtils {
 		String date = getMethod.getResponseHeader("Date").getValue();
 		return date;
 
+	}
+
+	public static String generateUniqueStratosApplicationId(int tenantId, String applicationId, String version){
+		return tenantId + AppFactoryConstants.HYPHEN + applicationId + AppFactoryConstants.HYPHEN + version;
 	}
 }
