@@ -34,8 +34,9 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.stratos.common.beans.application.ApplicationBean;
+import org.wso2.carbon.appfactory.common.AppFactoryConstants;
 import org.wso2.carbon.appfactory.common.AppFactoryException;
-import org.wso2.carbon.appfactory.common.util.MutualAuthHttpClient;
 import org.wso2.carbon.appfactory.common.util.ServerResponse;
 
 import java.io.IOException;
@@ -132,7 +133,7 @@ public class StratosRestService {
 		HttpClient httpClient = getNewHttpClient();
 
 		ServerResponse response = doPost(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-		                                             +applicationId + "/deploy/" + "application-policy_dev" ,"");
+                                                     + applicationId + "/deploy/" + "application-policy_dev", "");
 
 		if (response.getStatusCode() == HttpStatus.SC_OK) {
 
@@ -162,7 +163,7 @@ public class StratosRestService {
 		HttpClient httpClient = getNewHttpClient();
 
 		ServerResponse response = doPost(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-		                                             +applicationId + "/undeploy/"  ,"");
+                                                     + applicationId + "/undeploy/", "");
 
 		if (response.getStatusCode() == HttpStatus.SC_OK) {
 			if (log.isDebugEnabled()) {
@@ -190,7 +191,7 @@ public class StratosRestService {
 		HttpClient httpClient = getNewHttpClient();
 
 		ServerResponse response = doDelete(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-		                                               + applicationId);
+                                                       + applicationId);
 
 		if (response.getStatusCode() == HttpStatus.SC_OK) {
 
@@ -213,6 +214,40 @@ public class StratosRestService {
 		}
 		return true;
 
+	}
+
+	public boolean isApplicationDeployed(String applicationId) throws AppFactoryException {
+		HttpClient httpClient = getNewHttpClient();
+
+		ServerResponse response = doGet(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
+		                                               + applicationId);
+
+		if (response.getStatusCode() == HttpStatus.SC_OK) {
+			String applicationInfoJson = response.getResponse();
+            if (log.isDebugEnabled()) {
+                log.debug("Stratos application information : " + applicationInfoJson );
+            }
+
+			Gson gson = new Gson();
+			ApplicationBean applicationBean = gson.fromJson(applicationInfoJson,ApplicationBean.class);
+
+			if (applicationBean == null) {
+				log.error("Error occurred while converting application info json to ApplicationBean");
+				return false;
+			}
+
+			if(AppFactoryConstants.STRATOS_APP_STATUS_DEPLOYED.equalsIgnoreCase(applicationBean.getStatus())){
+				return true;
+			}else{
+				return false;
+			}
+
+		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+			log.error("Authorization failed when getting application information for stratos appid : " + applicationId);
+		} else {
+			log.error("Error occurred while getting application information for stratos appid : " + applicationId);
+		}
+		return false;
 	}
 
 	public String getSubscribedCartridgeClusterId(String cartridgeAlias) throws AppFactoryException {
@@ -349,7 +384,7 @@ public class StratosRestService {
 	 * @return
 	 * @throws Exception
 	 */
-	public ServerResponse doGet(HttpClient httpClient, String resourcePath) throws Exception {
+	public ServerResponse doGet(HttpClient httpClient, String resourcePath) throws AppFactoryException {
 
 		GetMethod getRequest = new GetMethod(resourcePath);
 		String userPass = this.username + ":" + this.password;

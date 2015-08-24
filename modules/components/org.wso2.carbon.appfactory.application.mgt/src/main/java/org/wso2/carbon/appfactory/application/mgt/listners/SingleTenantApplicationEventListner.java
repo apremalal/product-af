@@ -19,8 +19,6 @@ import org.wso2.carbon.appfactory.s4.integration.StratosRestService;
 import org.wso2.carbon.appfactory.s4.integration.utils.CloudUtils;
 import org.wso2.carbon.user.api.UserStoreException;
 
-import java.io.File;
-
 
 public class SingleTenantApplicationEventListner extends ApplicationEventsHandler {
     private static Log log = LogFactory.getLog(SingleTenantApplicationEventListner.class);
@@ -38,16 +36,17 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
     }
 
     @Override
+    /**
+     * Undeploy and delete the stratos applications created for this appfactory app
+     */
     public void onDeletion(org.wso2.carbon.appfactory.core.dto.Application application, String userName,
                            String tenantDomain) throws AppFactoryException {
-        //undeploy and delete the coresponding application from stratos
         ApplicationTypeBean applicationTypeBean = ApplicationTypeManager.getInstance()
                                                                         .getApplicationTypeBean(application.getType());
         if (applicationTypeBean == null) {
             throw new AppFactoryException(
-                    "Application Type details cannot be found for Artifact Type : " +
-                    application.getType() + ", application id" + application.getId() +
-                    " for tenant domain: " + tenantDomain);
+                    "Application Type details cannot be found for Artifact Type : " + application.getType()
+                    + ", application id" + application.getId() + " for tenant domain: " + tenantDomain);
         }
 
         String runtimeNameForAppType = applicationTypeBean.getRuntimes()[0];
@@ -69,19 +68,24 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
                 AppFactoryConstants.TENANT_MGT_URL);
 
         String  tenantUsername = application.getOwner();
-        String stratosApplicationId = null;
+        String stratosApplicationId;
         StratosRestService restService = new StratosRestService(stratosServerURL, tenantUsername, "nopassword");
         
         int tenantId = -1;
         try {
             tenantId = Util.getRealmService().getTenantManager().getTenantId(tenantDomain);
         } catch (UserStoreException e) {
-            e.printStackTrace();
+            throw new AppFactoryException("Error while getting tenantId for domain " + tenantDomain  , e);
         }
         
         for (String version : versions) {
             stratosApplicationId = CloudUtils.generateUniqueStratosApplicationId(tenantId, application.getId(), version);
             restService.undeployApplication(stratosApplicationId);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             restService.deleteApplication(stratosApplicationId);
         }      
     }
@@ -135,30 +139,6 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
                                String tenantDomain)
             throws AppFactoryException {
         return false;
-    }  
-
-    private String generateRepoUrlFromTemplate(org.wso2.carbon.appfactory.core.dto.Application application, int tenantId, String paasRepositoryURLPattern, String stage, String version)
-            throws AppFactoryException {
-
-        String s = paasRepositoryURLPattern.replace(AppFactoryConstants.STAGE_PLACE_HOLDER, stage) + File.separator
-                   + Integer.toString(tenantId) + File.separator + application.getId() + AppFactoryConstants.MINUS + version;
-
-        log.info("Generated single tenant repo URL for stage " + stage + " : " + s);
-        return s;
-
-    }
-
-    private RuntimeBean getRuntimeBean(String applicationType) throws AppFactoryException {
-
-        ApplicationTypeBean applicationTypeBean = ApplicationTypeManager.getInstance().getApplicationTypeBean(
-                applicationType);
-
-        String runtimeNameForAppType = applicationTypeBean.getRuntimes()[0];
-        RuntimeBean runtimeBean = RuntimeManager.getInstance().getRuntimeBean(runtimeNameForAppType);
-        if (runtimeBean == null) {
-            throw new AppFactoryException("Runtime details cannot be found for Artifact Type : ");
-        }
-        return runtimeBean;
     }
 
 }

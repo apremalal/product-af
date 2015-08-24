@@ -16,9 +16,6 @@
 
 package org.wso2.carbon.appfactory.application.mgt.internal;
 
-import java.util.Dictionary;
-import java.util.Hashtable;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
@@ -41,6 +38,9 @@ import org.wso2.carbon.appfactory.tenant.mgt.service.TenantManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ConfigurationContextService;
+
+import java.util.Dictionary;
+import java.util.Hashtable;
 
 /**
  * @scr.component name="org.wso2.carbon.appfactory.user.registration" immediate="true"
@@ -168,7 +168,7 @@ public class ApplicationManagementServiceComponent {
 			                              new SingleTenantApplicationEventListner(
 					                              "InitialArtifactDeployerHandler", priority), null);
 		} catch (NumberFormatException nfe) {
-			log.error("Invalid priority provided for InitialArtifactDeployerHandler", nfe);
+			log.error("Invalid priority provided for SingleTenantApplicationEventListner", nfe);
 		}
 
 		if (log.isDebugEnabled()) {

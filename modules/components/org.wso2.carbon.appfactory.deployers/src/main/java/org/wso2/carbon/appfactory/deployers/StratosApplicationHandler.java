@@ -35,7 +35,7 @@ public class StratosApplicationHandler {
 
     private static final Log log = LogFactory.getLog(StratosApplicationHandler.class);
 
-    private static final StratosApplicationHandler subscriptionHandler = new StratosApplicationHandler();
+    private static final StratosApplicationHandler stratosApplicationHandler = new StratosApplicationHandler();
 
     private StratosApplicationHandler() {
     }
@@ -45,7 +45,7 @@ public class StratosApplicationHandler {
      * @return instance of the subscription handler
      */
     public static StratosApplicationHandler getInstance(){
-        return subscriptionHandler;
+        return stratosApplicationHandler;
     }
 
     public void createAndDeployStratosApplication(Map metadata, String repoUrl, String stratosApplicationId, String repoUsername, String repoPassword ) throws AppFactoryException {
