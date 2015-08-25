@@ -18,6 +18,7 @@ package org.wso2.carbon.appfactory.application.mgt.type;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.stratos.common.beans.topology.ApplicationInstanceBean;
 import org.wso2.carbon.appfactory.application.mgt.util.Util;
 import org.wso2.carbon.appfactory.common.AppFactoryConfiguration;
 import org.wso2.carbon.appfactory.common.AppFactoryConstants;
@@ -53,9 +54,23 @@ public class TomcatApplicationTypeProcessor extends MavenBasedApplicationTypePro
         String tenantUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         StratosRestService stratosRestService = new StratosRestService(stratosServerURL,tenantUsername,"nopassword");
 
-        if(!stratosRestService.isApplicationDeployed(CloudUtils.generateUniqueStratosApplicationId(tenantId,applicationID,applicationVersion))){
-           return null;
+        ApplicationInstanceBean applicationInstanceBean =  stratosRestService.getApplicationRuntime(
+                   CloudUtils.generateUniqueStratosApplicationId(tenantId, applicationID, applicationVersion));
+
+        int port = 80;
+        if(applicationInstanceBean != null)
+        {
+            if(applicationInstanceBean.getStatus().equalsIgnoreCase(AppFactoryConstants.STRATOS_RUNTIME_STATUS_ACTIVE)){
+                port = (applicationInstanceBean.getClusterInstances()).get(0).getMember().get(0).getPorts().get(0).getPort();
+            }else{
+                return null;
+            }
+        }else{
+            return null;
         }
+//        if(!stratosRestService.isApplicationDeployed(CloudUtils.generateUniqueStratosApplicationId(tenantId,applicationID,applicationVersion))){
+//           return null;
+//        }
 
         String url = (String) this.properties.getProperty(LAUNCH_URL_PATTERN);
 
@@ -75,7 +90,7 @@ public class TomcatApplicationTypeProcessor extends MavenBasedApplicationTypePro
             log.error("Error while getting the url stage value fo application:" + applicationID, e);
         }
 
-        url = url.replace(PARAM_APP_ID, applicationID).replace(PARAM_APP_VERSION, applicationVersion);
+        url = url.replace(PARAM_APP_ID, applicationID).replace(PARAM_APP_VERSION, applicationVersion).replace("{port}","" + port);
 
         return url;
     }

@@ -35,6 +35,7 @@ import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.stratos.common.beans.application.ApplicationBean;
+import org.apache.stratos.common.beans.topology.ApplicationInstanceBean;
 import org.wso2.carbon.appfactory.common.AppFactoryConstants;
 import org.wso2.carbon.appfactory.common.AppFactoryException;
 import org.wso2.carbon.appfactory.common.util.ServerResponse;
@@ -215,6 +216,29 @@ public class StratosRestService {
 		return true;
 
 	}
+
+    public ApplicationInstanceBean getApplicationRuntime(String applicationId) throws AppFactoryException{
+        HttpClient httpClient = getNewHttpClient();
+
+        ServerResponse response = doGet(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
+                                                    + applicationId + "/runtime");
+
+        if (response.getStatusCode() == HttpStatus.SC_OK) {
+            String applicationInstanceJson = response.getResponse();
+            if (log.isDebugEnabled()) {
+                log.debug("Stratos application information : " + applicationInstanceJson );
+            }
+
+            Gson gson = new Gson();
+            ApplicationInstanceBean applicationInstance = gson.fromJson(applicationInstanceJson,ApplicationInstanceBean.class);
+            return  applicationInstance;
+        } else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+            log.error("Authorization failed when getting application information for stratos appid : " + applicationId);
+        } else {
+            log.error("Error occurred while getting application information for stratos appid : " + applicationId);
+        }
+        return null;
+    }
 
 	public boolean isApplicationDeployed(String applicationId) throws AppFactoryException {
 		HttpClient httpClient = getNewHttpClient();

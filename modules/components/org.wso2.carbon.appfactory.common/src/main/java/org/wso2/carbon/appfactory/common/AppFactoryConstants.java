@@ -111,6 +111,7 @@ public class AppFactoryConstants {
 	public static final String APPEND_STAGE_TO_CARTRIDGE_INFO = "AppendStageToCartridgeInfo";
 	public static final String STRATOS_APP_ID ="StratosApplicationId";
 	public static final String STRATOS_APP_STATUS_DEPLOYED ="Deployed";
+	public static final String STRATOS_RUNTIME_STATUS_ACTIVE ="Active";
 
     /**
      * Defining archetype related constants
