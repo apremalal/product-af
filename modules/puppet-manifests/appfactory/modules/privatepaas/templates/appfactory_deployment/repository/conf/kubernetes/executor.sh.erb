@@ -25,6 +25,8 @@
     curl -X POST -H "Content-Type: application/json" -d @"application-policy_test.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
     curl -X POST -H "Content-Type: application/json" -d @"application-policy_prod.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
 
+    curl -X POST -H "Content-Type: application/json" -d @"application-policy-st.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
+
     sleep 1
     echo "Adding application..."
     curl -X POST -H "Content-Type: application/json" -d @"application_dev.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications

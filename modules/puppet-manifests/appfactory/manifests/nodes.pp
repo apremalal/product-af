@@ -354,6 +354,12 @@ node confignode inherits basenode  {
   $deployment_policy    = "af-deployment"
   $autoscale_policy     = "economy"
 
+#Single Tenant Applicatoin configs
+  $single_tenant_application_policy_id = "application-policy-st"
+
+  $autoscaling_policy_id = "autoscaling-policy"
+  $deployment_policy_id = "deployment-policy"
+
   $appserver_cartridge_alias_prefix      = "as"
   $appserver_cartridge_type_prefix       = "${dev_id}as"
 

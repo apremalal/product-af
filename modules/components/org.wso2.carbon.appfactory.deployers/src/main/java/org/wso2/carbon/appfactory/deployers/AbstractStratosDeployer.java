@@ -29,6 +29,7 @@ import org.wso2.carbon.appfactory.repository.mgt.RepositoryMgtException;
 import org.wso2.carbon.appfactory.repository.mgt.git.GitRepositoryClient;
 import org.wso2.carbon.appfactory.repository.mgt.git.JGitAgent;
 import org.wso2.carbon.appfactory.s4.integration.RepositoryProvider;
+import org.wso2.carbon.appfactory.s4.integration.StratosRestService;
 import org.wso2.carbon.appfactory.s4.integration.utils.CloudUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -56,8 +57,8 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
 
         String applicationId = DeployerUtil.getParameter(parameters,AppFactoryConstants.APPLICATION_ID);
         String currentVersion = DeployerUtil.getParameter(parameters, AppFactoryConstants.APPLICATION_VERSION);
-        String deployStage = DeployerUtil.getParameter(parameters,AppFactoryConstants.DEPLOY_STAGE);
-        String serverDeploymentPath = DeployerUtil.getParameter(parameters,AppFactoryConstants.SERVER_DEPLOYMENT_PATHS);
+        String deployStage = DeployerUtil.getParameter(parameters, AppFactoryConstants.DEPLOY_STAGE);
+        String serverDeploymentPath = DeployerUtil.getParameter(parameters, AppFactoryConstants.SERVER_DEPLOYMENT_PATHS);
         String tenantDomain = DeployerUtil.getParameter(parameters, AppFactoryConstants.TENANT_DOMAIN);
         int tenantId = Integer.parseInt(DeployerUtil.getParameter(parameters, AppFactoryConstants.TENANT_ID));
 
@@ -88,7 +89,6 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
     private void addToGitRepo(String fileName, File artifacts, Map metadata,
                               String appTypeName, String serverDeploymentPath,
                               String relativePathFragment,String tenantDomain,int tenantId) throws AppFactoryException {
-
         // subscribeOnDeployment is true or not
         boolean subscribeOnDeployment = Boolean.parseBoolean(
                 DeployerUtil.getParameterValue(metadata, AppFactoryConstants.RUNTIME_SUBSCRIBE_ON_DEPLOYMENT));
@@ -96,21 +96,33 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         String version = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.APPLICATION_VERSION);
         version = version.replaceAll("\\.+",AppFactoryConstants.MINUS);
         String baseRepoUrl = getBaseRepoUrl();
-        String generatedRepoName = generateRepoUrl(applicationId, version, metadata, tenantId, appTypeName, subscribeOnDeployment);
+        String generatedRepoName = generateRepoName(applicationId, version, metadata, tenantId, appTypeName, subscribeOnDeployment);
         String gitRepoUrl = baseRepoUrl +  AppFactoryConstants.GIT_REPOSITORY_CONTEXT + generatedRepoName;
         String stageName = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.DEPLOY_STAGE);
+
+        String cartridgeType = DeployerUtil.getParameter(metadata, AppFactoryConstants.APPLICATION_TYPE_CONFIG);
+        String cartridgeTypePrefix = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
+        String deploymentPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
+        String autoScalingPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_DEPLOYMENT_POLICY);
+        String tenantUsername = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.TENANT_USER_NAME);
 
         String applicationAdmin = getAdminUserName();
         String defaultPassword = getAdminPassword();
 
         // if subscribeOnDeployment is true create a git repo per application version
         if (subscribeOnDeployment) {
-            String paasRepoProviderClass = DeployerUtil.getParameter(metadata,AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME);
+            String paasRepoProviderClass = DeployerUtil.getParameter(metadata, AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME);
             createStratosArticatRepository(paasRepoProviderClass,applicationAdmin,defaultPassword,generatedRepoName);
 
             String uniqueStratosAppId = CloudUtils.generateUniqueStratosApplicationId(tenantId,applicationId,version);
-
-            StratosApplicationHandler.getInstance().createAndDeployStratosApplication(metadata,gitRepoUrl,uniqueStratosAppId,defaultPassword,defaultPassword);
+            StratosRestService stratosRestService = StratosRestService.getInstance(getStratosServerURL(),tenantUsername,
+                                                                                   AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
+            // Create stratos application only if it not created for the uniqueStratosAppId
+            if(!stratosRestService.isApplicationCreated(uniqueStratosAppId)){
+                stratosRestService.createApplication(uniqueStratosAppId, baseRepoUrl, tenantUsername, defaultPassword,
+                                                     cartridgeType, cartridgeTypePrefix,deploymentPolicy,autoScalingPolicy);
+                stratosRestService.deployApplication(uniqueStratosAppId);
+            }
         }
 
         // Create the temporary directory first. without this we can't proceed
@@ -311,34 +323,31 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         }
     }
 
-    protected String generateRepoUrl(String applicationId,String version, Map metadata,
-                                     int tenantId, String appType, boolean subscribeOnDeployment)
+    protected String generateRepoName(String applicationId, String version, Map metadata,
+                                      int tenantId, String appType, boolean subscribeOnDeployment)
             throws AppFactoryException {
         String paasRepositoryURLPattern = DeployerUtil.getParameter(metadata,
                                                                     AppFactoryConstants.PAAS_REPOSITORY_URL_PATTERN);
         String stage = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.DEPLOY_STAGE);
 
-        String gitRepoUrl = "";
+        String gitRepoName = "";
         if (subscribeOnDeployment) {
-            gitRepoUrl = AppFactoryConstants.URL_SEPERATOR + paasRepositoryURLPattern
-                         + AppFactoryConstants.URL_SEPERATOR + tenantId + AppFactoryConstants.URL_SEPERATOR + applicationId
-                         + AppFactoryConstants.MINUS + version + AppFactoryConstants.GIT_REPOSITORY_EXTENSION;
+            gitRepoName = CloudUtils.generateSingleTenantArtifactRepositoryName(paasRepositoryURLPattern,stage,version,
+                                                                                applicationId,tenantId);
         } else {
             String repoFrom = DeployerUtil.getParameterValue(metadata,AppFactoryConstants.REPOSITORY_FROM);
             String preDevRepoNameAppender = "";
             // append _<username>, if the deployment repo is a forked one
             if(AppFactoryConstants.FORK_REPOSITORY.equals(repoFrom))
-                preDevRepoNameAppender = "_" + MultitenantUtils.getTenantAwareUsername(DeployerUtil.getParameterValue(metadata,"tenantUserName"));
+                preDevRepoNameAppender = "_" + MultitenantUtils.getTenantAwareUsername(
+                        DeployerUtil.getParameterValue(metadata,AppFactoryConstants.TENANT_USER_NAME));
 
-            gitRepoUrl =  AppFactoryConstants.URL_SEPERATOR + paasRepositoryURLPattern
+            gitRepoName =  AppFactoryConstants.URL_SEPERATOR + paasRepositoryURLPattern
                          + AppFactoryConstants.URL_SEPERATOR + tenantId + preDevRepoNameAppender
                          + AppFactoryConstants.GIT_REPOSITORY_EXTENSION;
+            gitRepoName = gitRepoName.replace(AppFactoryConstants.STAGE_PLACE_HOLDER, stage);
         }
-        gitRepoUrl = gitRepoUrl.replace(AppFactoryConstants.STAGE_PLACE_HOLDER, stage);
-        if (log.isDebugEnabled()) {
-            log.debug("Git URL : " + gitRepoUrl);
-        }
-        return gitRepoUrl;
+        return gitRepoName;
     }
 
     /**
@@ -358,7 +367,10 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         try {
             repoProviderClass = Class.forName(repoProviderClassName, true, loader);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            String msg = "Repository is not created for " + repoName + " due to repository provider "
+                         + repoProviderClassName+ " not found error";
+            log.error(msg);
+            throw new AppFactoryException(msg);
         }
         RepositoryProvider repoProvider = null;
         if (repoProviderClass != null) {
@@ -375,7 +387,6 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
                 throw new AppFactoryException(msg);
             }
         }
-
         repoProvider.setBaseUrl(getBaseRepoUrl());
         repoProvider.setAdminUsername(adminUsername);
         repoProvider.setAdminPassword(adminPassword);
@@ -399,4 +410,5 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
 
 	protected abstract String getAdminPassword() throws AppFactoryException;
 
+    protected abstract String getStratosServerURL() throws AppFactoryException;
 }

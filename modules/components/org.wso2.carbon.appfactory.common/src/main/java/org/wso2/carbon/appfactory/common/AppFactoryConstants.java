@@ -393,6 +393,9 @@ public class AppFactoryConstants {
     public static final String HYPHEN = "-";
 	public static final String STRATOS_SERVER_URL = "stratosServerUrl";
 
+	//Using Mutual SSL for authentication,hence use a dummy password
+	public static final String STRATOS_REST_SERVICE_PASSWORD = "nopassword";
+
 	public static final String APPFACTORY_ARTIFACT_NAME_VERSION_SEPERATOR = "-";
 
 

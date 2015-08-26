@@ -48,6 +48,7 @@ public abstract class AbstractApplicationTypeProcessor implements ApplicationTyp
     public static final String PARAM_TENANT_DOMAIN = "{tenantDomain}";
     public static final String PARAM_APP_ID = "{applicationID}";
     public static final String PARAM_APP_VERSION = "{applicationVersion}";
+	public static final String PARAM_HOST_NAME = "{hostname}";
     public static final String PARAM_APP_STAGE = "{stage}";
     public static final String PARAM_APP_STAGE_NAME_SUFFIX = "StageParam";
     public static final String ARTIFACT_VERSION_XPATH = "TrunkVersioning.WebappVersioning.ArtifactVersionName";

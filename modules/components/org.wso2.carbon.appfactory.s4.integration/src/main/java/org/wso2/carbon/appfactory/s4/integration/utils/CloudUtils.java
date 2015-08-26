@@ -101,9 +101,9 @@ public class CloudUtils {
 	 */
 	public static boolean isAWSRoute53Enabled() {
 		return Boolean.parseBoolean(ServiceReferenceHolder.getInstance()
-		                                                  .getAppFactoryConfiguration()
-		                                                  .getFirstProperty("EnableAWSRoute53")
-		                                                  .trim());
+				                            .getAppFactoryConfiguration()
+				                            .getFirstProperty("EnableAWSRoute53")
+				                            .trim());
 	}
 
 	/**
@@ -268,6 +268,28 @@ public class CloudUtils {
 	 * @return
 	 */
 	public static String generateUniqueStratosApplicationId(int tenantId, String applicationId, String version){
-		return tenantId + AppFactoryConstants.HYPHEN + applicationId + AppFactoryConstants.HYPHEN +  (version + "").replace(AppFactoryConstants.DOT,AppFactoryConstants.HYPHEN);
+		return tenantId + AppFactoryConstants.HYPHEN + applicationId + AppFactoryConstants.HYPHEN +
+		       (version + "").replace(AppFactoryConstants.DOT,AppFactoryConstants.HYPHEN);
+	}
+
+	/**
+	 *  Generate the Stratos artifact repository name
+	 * @param paasRepositoryURLPattern Ex : {@stage}/tomcat
+	 * @param stage
+	 * @param version
+	 * @param applicationId
+	 * @param tenantId
+	 * @return repository name
+	 */
+	public static String generateSingleTenantArtifactRepositoryName(String paasRepositoryURLPattern, String stage,
+	                                                         String version, String applicationId, int tenantId){
+		//needs to replace dot(.) with minus(-) cause git doesn't allow
+		version = version.replaceAll("\\.+",AppFactoryConstants.MINUS);
+		String gitRepoName = AppFactoryConstants.URL_SEPERATOR + paasRepositoryURLPattern
+		                     + AppFactoryConstants.URL_SEPERATOR + tenantId + AppFactoryConstants.URL_SEPERATOR
+		                     + applicationId + AppFactoryConstants.MINUS + version
+		                     + AppFactoryConstants.GIT_REPOSITORY_EXTENSION;
+		gitRepoName = gitRepoName.replace(AppFactoryConstants.STAGE_PLACE_HOLDER, stage);
+		return gitRepoName;
 	}
 }

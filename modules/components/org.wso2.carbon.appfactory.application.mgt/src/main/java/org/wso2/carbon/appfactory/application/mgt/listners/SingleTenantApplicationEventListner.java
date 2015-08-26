@@ -15,6 +15,8 @@ import org.wso2.carbon.appfactory.core.dao.JDBCAppVersionDAO;
 import org.wso2.carbon.appfactory.core.dto.UserInfo;
 import org.wso2.carbon.appfactory.core.dto.Version;
 import org.wso2.carbon.appfactory.core.runtime.RuntimeManager;
+import org.wso2.carbon.appfactory.repository.mgt.RepositoryMgtException;
+import org.wso2.carbon.appfactory.repository.mgt.RepositoryProvider;
 import org.wso2.carbon.appfactory.s4.integration.StratosRestService;
 import org.wso2.carbon.appfactory.s4.integration.utils.CloudUtils;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -35,9 +37,8 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
 
     }
 
-    @Override
     /**
-     * Undeploy and delete the stratos applications created for this appfactory app
+     * Undeploy and delete the stratos applications created for this application
      */
     public void onDeletion(org.wso2.carbon.appfactory.core.dto.Application application, String userName,
                            String tenantDomain) throws AppFactoryException {
@@ -52,12 +53,6 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
         String runtimeNameForAppType = applicationTypeBean.getRuntimes()[0];
         RuntimeBean runtimeBean = RuntimeManager.getInstance().getRuntimeBean(runtimeNameForAppType);
 
-        if (runtimeBean == null) {
-            throw new AppFactoryException(
-                    "Runtime details cannot be found for Artifact Type : " + application.getType() + ", application id"+
-                    application.getId() + " for tenant domain: " + tenantDomain);
-        }
-        
         JDBCAppVersionDAO appVersionDAO = JDBCAppVersionDAO.getInstance();
         String[] versions = appVersionDAO.getAllVersionNamesOfApplication(application.getId());
 
@@ -68,7 +63,6 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
                 AppFactoryConstants.TENANT_MGT_URL);
 
         String  tenantUsername = application.getOwner();
-        String stratosApplicationId;
         StratosRestService restService = new StratosRestService(stratosServerURL, tenantUsername, "nopassword");
         
         int tenantId = -1;
@@ -77,16 +71,34 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
         } catch (UserStoreException e) {
             throw new AppFactoryException("Error while getting tenantId for domain " + tenantDomain  , e);
         }
-        
+
+        RepositoryProvider repositoryProvider = org.wso2.carbon.appfactory.repository.mgt.internal.Util.
+                                      getRepositoryProvider(application.getRepositoryType());
+        String paasRepositoryUrlPattern = runtimeBean.getPaasRepositoryURLPattern();
+        String stratosApplicationId;
         for (String version : versions) {
             stratosApplicationId = CloudUtils.generateUniqueStratosApplicationId(tenantId, application.getId(), version);
             restService.undeployApplication(stratosApplicationId);
+            //TODO :
+            // Have to wait till application get undeployed
+            // Stratos is going to make undeploy a synchronous call or will provide a certial wait time
+            // Before deletion
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                log.error("Sleep thread got interrupted before deleting stratos application");
             }
             restService.deleteApplication(stratosApplicationId);
+
+            try {
+                repositoryProvider.deleteStratosArtifactRepository(CloudUtils.generateSingleTenantArtifactRepositoryName(
+                        paasRepositoryUrlPattern,appVersionDAO.getAppVersionStage(application.getId(),version),version,
+                        stratosApplicationId,tenantId));
+            } catch (RepositoryMgtException e) {
+               log.error("Error while deleting stratos repository for application " + application.getId()
+                         + " version :" + version);
+                //No need to throw since this is an artifact repo
+            }
         }      
     }
 

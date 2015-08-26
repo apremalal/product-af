@@ -19,7 +19,6 @@
 package org.wso2.carbon.appfactory.s4.integration;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -32,17 +31,15 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.stratos.common.beans.application.ApplicationBean;
-import org.apache.stratos.common.beans.topology.ApplicationInstanceBean;
-import org.wso2.carbon.appfactory.common.AppFactoryConstants;
 import org.wso2.carbon.appfactory.common.AppFactoryException;
+import org.wso2.carbon.appfactory.common.util.MutualAuthHttpClient;
 import org.wso2.carbon.appfactory.common.util.ServerResponse;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Map;
 
 /**
  * Http Client based REST Client for calling Stratos APIs
@@ -57,6 +54,7 @@ public class StratosRestService {
 
 	private static final String APPLICATIONS_REST_END_POINT = "/api/applications";
 	private static final String LIST_DETAILS_OF_SUBSCRIBED_CARTRIDGE = "/stratos/admin/cartridge/info/";
+    private static final String SINGLE_TENANT_APPLICATION_POLICY_ID = "application-policy-st";
 
 	public StratosRestService(String stratosManagerURL, String username, String password) {
 		this.username = username;
@@ -64,212 +62,83 @@ public class StratosRestService {
 		this.stratosManagerURL = stratosManagerURL;
 	}
 
-	public boolean createApplication(String applicationId, String repoUrl, String repoUsername, String repoPassword, String cartridgeType) throws AppFactoryException {
-		JsonObject applicationJson = new JsonObject();
-		applicationJson.addProperty("applicationId", applicationId);
-		applicationJson.addProperty("alias", "eert");
-
-		JsonObject components = new JsonObject();
-
-		JsonArray cartridges = new JsonArray();
-		JsonObject cartridge = new JsonObject();
-		cartridge.addProperty("type",cartridgeType);
-		cartridge.addProperty("cartridgeMin",1);
-		cartridge.addProperty("cartridgeMax",1);
-
-		JsonObject subscribableinfo = new JsonObject();
-		subscribableinfo.addProperty("alias","dfdce");
-		subscribableinfo.addProperty("deploymentPolicy","deployment-policy");
-		subscribableinfo.addProperty("autoscalingPolicy","autoscaling-policy");
-
-		JsonObject artifactRepository = new JsonObject();
-		artifactRepository.addProperty("privateRepo",true);
-		artifactRepository.addProperty("repoUrl", repoUrl);
-		artifactRepository.addProperty("repoUsername", repoUsername);
-		artifactRepository.addProperty("repoPassword",repoPassword);
-
-		subscribableinfo.add("artifactRepository",artifactRepository);
-
-		cartridge.add("subscribableInfo",subscribableinfo);
-
-		cartridges.add(cartridge);
-		components.add("cartridges",cartridges);
-		applicationJson.add("components", components);
-
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-		String completeJsonSubscribeString = gson.toJson(applicationJson);
-
-		HttpClient httpClient = getNewHttpClient();
-
-		ServerResponse response = doPost(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT,
-		                                 completeJsonSubscribeString);
-
-		if (response.getStatusCode() == HttpStatus.SC_OK) {
-
-			if (log.isDebugEnabled()) {
-				log.debug(" Status 200 returned when subsctibing to cartridge ");
-			}
-
-			String subscriptionOutput = response.getResponse();
-
-			if (subscriptionOutput == null) {
-				log.error("Error occurred while getting response. Response is null");
-				return false;
-			}
-			log.info(String.format("Successfully subscribed to %s cartridge with alias %s with repo url %s"));
-
-		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-			log.error("Authorization failed when subsctibing to cartridge ");
-		} else {
-			log.error("Error occurred while subscribing to cartdridge,"
-			          + "server returned  " + response.getStatusCode() + " "
-			          + response.getResponse());
-		}
-		return true;
+	public static StratosRestService getInstance(String stratosManagerURL, String username, String password){
+		return new StratosRestService(stratosManagerURL, username, password);
 	}
 
-	public boolean deployApplication(String applicationId, String stage) throws AppFactoryException {
+	public void createApplication(String applicationId, String repoUrl, String repoUsername, String repoPassword,
+                                     String cartridgeType, String cartridgeTypePrefix, String deploymentPolicy,
+                                     String autoScalingPolicy) throws AppFactoryException {
+		String stratosApplicationJson = getStratosApplicationJson(applicationId, repoUrl, repoUsername, repoPassword
+				, cartridgeType, cartridgeTypePrefix, deploymentPolicy, autoScalingPolicy);
 
-		HttpClient httpClient = getNewHttpClient();
-
-		ServerResponse response = doPost(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-                                                     + applicationId + "/deploy/" + "application-policy_dev", "");
-
-		if (response.getStatusCode() == HttpStatus.SC_OK) {
-
+		ServerResponse response = MutualAuthHttpClient.sendPostRequest(this.stratosManagerURL
+		                                                               + this.APPLICATIONS_REST_END_POINT,
+		                                                               stratosApplicationJson,username);
+		if (response.getStatusCode() == HttpStatus.SC_CREATED) {
 			if (log.isDebugEnabled()) {
-				log.debug(" Status 200 returned when subsctibing to cartridge ");
+				log.debug("Stratos application created for appId : " + applicationId);
 			}
-
-			String subscriptionOutput = response.getResponse();
-
-			if (subscriptionOutput == null) {
-				log.error("/Error occurred while getting response. Response is null");
-				return false;
-			}
-			log.info(String.format(	"Successfully subscribed to %s cartridge with alias %s with repo url %s"));
-		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-			log.error("Authorization failed when subsctibing to cartridge ");
-		} else {
-			log.error("Error occurred while subscribing to cartdridge,"
-			          + "server returned  " + response.getStatusCode() + " "
-			          + response.getResponse());
 		}
-		return true;
 	}
 
-	public boolean undeployApplication(String applicationId) throws AppFactoryException {
-
-		HttpClient httpClient = getNewHttpClient();
-
-		ServerResponse response = doPost(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-                                                     + applicationId + "/undeploy/", "");
-
-		if (response.getStatusCode() == HttpStatus.SC_OK) {
+	public void deployApplication(String applicationId) throws AppFactoryException {
+		ServerResponse response = MutualAuthHttpClient.sendPostRequest(stratosManagerURL + APPLICATIONS_REST_END_POINT
+		                                                               + "/" + applicationId + "/deploy/"
+		                                                               + SINGLE_TENANT_APPLICATION_POLICY_ID, "",username);
+		if (response.getStatusCode() == HttpStatus.SC_ACCEPTED) {
 			if (log.isDebugEnabled()) {
-				log.debug(" Status 200 returned when undeploying application");
+				log.debug(" Stratos application deployed for appId : " + applicationId);
 			}
-
-			String subscriptionOutput = response.getResponse();
-
-			if (subscriptionOutput == null) {
-				log.error("/Error occurred while getting response. Response is null");
-				return false;
-			}
-		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-			log.error("Authorization failed when subsctibing to cartridge ");
-		} else {
-			log.error("Error occurred while undeploying application, server returned  " + response.getStatusCode() + " "
-			          + response.getResponse());
-			return false;
 		}
-		return true;
-
 	}
 
-	public boolean deleteApplication(String applicationId) throws AppFactoryException {
-		HttpClient httpClient = getNewHttpClient();
-
-		ServerResponse response = doDelete(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-                                                       + applicationId);
-
-		if (response.getStatusCode() == HttpStatus.SC_OK) {
-
+	public void undeployApplication(String applicationId) throws AppFactoryException {
+		ServerResponse response = MutualAuthHttpClient.sendPostRequest(this.stratosManagerURL
+		                                                               + this.APPLICATIONS_REST_END_POINT + "/"
+		                                                               + applicationId + "/undeploy/", "",username);
+		if (response.getStatusCode() == HttpStatus.SC_ACCEPTED) {
 			if (log.isDebugEnabled()) {
-				log.debug(" Status 200 returned when subsctibing to cartridge ");
+				log.debug("Stratos undeployment started successfully for appId : " + applicationId);
 			}
-
-			String subscriptionOutput = response.getResponse();
-
-			if (subscriptionOutput == null) {
-				log.error("Error occurred while getting response. Response is null");
-				return false;
-			}
-			log.info(String.format(	"Successfully subscribed to %s cartridge with alias %s with repo url %s"));
-		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-			log.error("Authorization failed when subsctibing to cartridge ");
-		} else {
-			log.error("Error occurred while subscribing to cartdridge,"
-			          + "server returned  " + response.getStatusCode() + " " + response.getResponse());
 		}
-		return true;
-
 	}
 
-    public ApplicationInstanceBean getApplicationRuntime(String applicationId) throws AppFactoryException{
-        HttpClient httpClient = getNewHttpClient();
+	public void deleteApplication(String applicationId) throws AppFactoryException {
+		ServerResponse response = MutualAuthHttpClient.sendDeleteRequest(this.stratosManagerURL
+		                                                                 + this.APPLICATIONS_REST_END_POINT + "/"
+		                                                                 + applicationId,username);
+		if (response.getStatusCode() == HttpStatus.SC_OK) {
+			if (log.isDebugEnabled()) {
+				log.debug("Stratos application deleted successfully for appId : " + applicationId);
+			}
+		}
+	}
 
-        ServerResponse response = doGet(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-                                                    + applicationId + "/runtime");
-
+    public String getApplicationRuntime(String applicationId) throws AppFactoryException{
+        ServerResponse response = MutualAuthHttpClient.sendGetRequest(this.stratosManagerURL
+                                                                      + this.APPLICATIONS_REST_END_POINT + "/"
+                                                                      + applicationId + "/runtime",username);
         if (response.getStatusCode() == HttpStatus.SC_OK) {
             String applicationInstanceJson = response.getResponse();
             if (log.isDebugEnabled()) {
-                log.debug("Stratos application information : " + applicationInstanceJson );
+                log.debug("Stratos application runtime json : " + applicationInstanceJson);
             }
-
-            Gson gson = new Gson();
-            ApplicationInstanceBean applicationInstance = gson.fromJson(applicationInstanceJson,ApplicationInstanceBean.class);
-            return  applicationInstance;
-        } else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-            log.error("Authorization failed when getting application information for stratos appid : " + applicationId);
-        } else {
-            log.error("Error occurred while getting application information for stratos appid : " + applicationId);
+            return  applicationInstanceJson;
         }
         return null;
     }
 
-	public boolean isApplicationDeployed(String applicationId) throws AppFactoryException {
-		HttpClient httpClient = getNewHttpClient();
-
-		ServerResponse response = doGet(httpClient, this.stratosManagerURL + this.APPLICATIONS_REST_END_POINT + "/"
-		                                               + applicationId);
-
+	public boolean isApplicationCreated(String applicationId) throws AppFactoryException {
+		ServerResponse response = MutualAuthHttpClient.sendGetRequest(this.stratosManagerURL
+		                                                              + this.APPLICATIONS_REST_END_POINT + "/"
+		                                                              + applicationId,username);
 		if (response.getStatusCode() == HttpStatus.SC_OK) {
 			String applicationInfoJson = response.getResponse();
             if (log.isDebugEnabled()) {
                 log.debug("Stratos application information : " + applicationInfoJson );
             }
-
-			Gson gson = new Gson();
-			ApplicationBean applicationBean = gson.fromJson(applicationInfoJson,ApplicationBean.class);
-
-			if (applicationBean == null) {
-				log.error("Error occurred while converting application info json to ApplicationBean");
-				return false;
-			}
-
-			if(AppFactoryConstants.STRATOS_APP_STATUS_DEPLOYED.equalsIgnoreCase(applicationBean.getStatus())){
-				return true;
-			}else{
-				return false;
-			}
-
-		} else if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-			log.error("Authorization failed when getting application information for stratos appid : " + applicationId);
-		} else {
-			log.error("Error occurred while getting application information for stratos appid : " + applicationId);
+			return true;
 		}
 		return false;
 	}
@@ -293,8 +162,6 @@ public class StratosRestService {
 				if (log.isDebugEnabled()) {
 					log.debug("Successfully retrieved the subscription info");
 				}
-
-				GsonBuilder gsonBuilder = new GsonBuilder();
 				JsonParser jsonParser = new JsonParser();
 				JsonObject subscriptionInfo = jsonParser.parse(response.getResponse()).getAsJsonObject();
 				if (subscriptionInfo != null && subscriptionInfo.isJsonObject()) {
@@ -315,10 +182,6 @@ public class StratosRestService {
 		throw new AppFactoryException(msg, e);
 	}
 
-	private String getApplicationJsonAsString(Map<String,String> applicationInfoMap){
-
-		return null;
-	}
 	/**
 	 * Since Mutual SSL is used, a dummy password will be sent to stratos side
 	 *
@@ -439,5 +302,53 @@ public class StratosRestService {
 
 	public HttpClient getNewHttpClient() {
 		return new HttpClient(new MultiThreadedHttpConnectionManager());
+	}
+
+	private String getStratosApplicationJson(String applicationId, String repoUrl, String repoUsername,
+	                                            String repoPassword, String cartridgeType, String cartridgeTypePrefix,
+	                                            String deploymentPolicy, String autoScalingPolicy){
+
+		JsonObject applicationJson = new JsonObject();
+		applicationJson.addProperty("applicationId", applicationId);
+		applicationJson.addProperty("alias", "single-tenant");
+
+		JsonObject components = new JsonObject();
+
+		JsonArray cartridges = new JsonArray();
+		JsonObject cartridge = new JsonObject();
+
+		cartridge.addProperty("type",cartridgeType);
+		cartridge.addProperty("cartridgeMin",1);
+		cartridge.addProperty("cartridgeMax",1);
+
+		JsonObject subscribableInfo = new JsonObject();
+
+		if(StringUtils.isNotEmpty(cartridgeTypePrefix)) {
+			cartridgeTypePrefix = cartridgeTypePrefix.toLowerCase();
+		}else{
+			log.error("cartridge prefix cannot be null");
+		}
+
+		subscribableInfo.addProperty("alias", cartridgeTypePrefix);
+		subscribableInfo.addProperty("deploymentPolicy", deploymentPolicy);
+		subscribableInfo.addProperty("autoscalingPolicy", autoScalingPolicy);
+
+		JsonObject artifactRepository = new JsonObject();
+		artifactRepository.addProperty("privateRepo",true);
+		artifactRepository.addProperty("repoUrl", repoUrl);
+		artifactRepository.addProperty("repoUsername", repoUsername);
+		artifactRepository.addProperty("repoPassword",repoPassword);
+
+		subscribableInfo.add("artifactRepository", artifactRepository);
+
+		cartridge.add("subscribableInfo",subscribableInfo);
+
+		cartridges.add(cartridge);
+		components.add("cartridges",cartridges);
+		applicationJson.add("components", components);
+
+		Gson gson = new Gson();
+
+		return gson.toJson(applicationJson);
 	}
 }

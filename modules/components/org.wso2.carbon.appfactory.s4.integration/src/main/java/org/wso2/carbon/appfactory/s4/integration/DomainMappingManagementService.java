@@ -116,7 +116,7 @@ public class DomainMappingManagementService {
                     body = DomainMappingUtils.generateInitialSubscriptionDomainJSON(domain);
                 }
                 response = MutualAuthHttpClient.sendPostRequest(body, DomainMappingUtils.getSMUrl(stage) +
-                                                                      addSubscriptionDomainEndPoint);
+                                                                      addSubscriptionDomainEndPoint,"");
             } catch (AppFactoryException e) {
                 log.error("Error occurred adding domain mappings to appkey " + appKey + " version " + version + " domain " + domain, e);
                 //Notifying the domain mapping failure to app wall
@@ -408,7 +408,7 @@ public class DomainMappingManagementService {
         ServerResponse deleteResponse;
         try {
             deleteResponse = MutualAuthHttpClient.sendDeleteRequest(
-                    DomainMappingUtils.getSMUrl(stage) + removeSubscriptionDomainEndPoint);
+                    DomainMappingUtils.getSMUrl(stage) + removeSubscriptionDomainEndPoint,"");
         } catch (AppFactoryException e) {
             log.error("Error occurred removing domain mapping : " + domain + " from tenant domain : " + tenantDomain +
                     " in stage :" + stage, e);
@@ -613,7 +613,7 @@ public class DomainMappingManagementService {
             // sending GET request for with domain.
             // if the requested domain is mapped it will send a response with 200 OK , else 404 Not found
             response = MutualAuthHttpClient.sendGetRequest(
-                    DomainMappingUtils.getSMUrl(stage) + validateSubscriptionDomainEndPoint);
+                    DomainMappingUtils.getSMUrl(stage) + validateSubscriptionDomainEndPoint,"");
         } catch (AppFactoryException e) {
             log.error("Error occurred while checking domain availability from Stratos side for domain:" + domain, e);
             throw new AppFactoryException(String.format(DomainMappingUtils.AF_DOMAIN_AVAILABILITY_ERROR_MSG, domain));
