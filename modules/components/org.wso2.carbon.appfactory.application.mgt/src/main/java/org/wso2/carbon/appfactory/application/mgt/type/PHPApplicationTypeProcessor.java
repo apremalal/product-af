@@ -100,7 +100,8 @@ public class PHPApplicationTypeProcessor extends AbstractFreeStyleApplicationTyp
         String cartridgeAlias = AppFactoryCoreUtil.getCartridgeAlias(applicationId, tenantDomain);
 
         StratosRestService restService = new StratosRestService(serverURL, userName, StringUtils.EMPTY);
-        String clusterId = restService.getSubscribedCartridgeClusterId(cartridgeAlias);
+        //TODO : update to new stratos API
+        String clusterId = "";//restService.getSubscribedCartridgeClusterId(cartridgeAlias);
 
         // get data from runtime db
         JDBCApplicationDAO jdbcApplicationDAO = JDBCApplicationDAO.getInstance();

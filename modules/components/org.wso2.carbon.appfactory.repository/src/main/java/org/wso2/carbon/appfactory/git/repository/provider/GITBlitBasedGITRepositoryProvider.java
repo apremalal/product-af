@@ -320,7 +320,6 @@ public class GITBlitBasedGITRepositoryProvider extends AbstractRepositoryProvide
 
 	@Override
 	public void deleteStratosArtifactRepository(String repoName) throws RepositoryMgtException{
-
 		String repoUrl = config.getFirstProperty(AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_BASE_URL);
 		String adminUsername = config.getFirstProperty(AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_ADMIN_USER_NAME);
 		String adminPassword = config.getFirstProperty(AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_ADMIN_PASSWORD);

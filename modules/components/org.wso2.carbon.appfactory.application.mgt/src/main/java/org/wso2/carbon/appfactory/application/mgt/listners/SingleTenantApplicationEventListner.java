@@ -24,8 +24,6 @@ import org.wso2.carbon.user.api.UserStoreException;
 
 public class SingleTenantApplicationEventListner extends ApplicationEventsHandler {
     private static Log log = LogFactory.getLog(SingleTenantApplicationEventListner.class);
-    private final String ENVIRONMENT = "ApplicationDeployment.DeploymentStage";
-
 
     public SingleTenantApplicationEventListner(String identifier, int priority) {
         super(identifier, priority);
@@ -38,12 +36,30 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
     }
 
     /**
-     * Undeploy and delete the stratos applications created for this application
+     * Undeploy and delete the stratos applications created for this appfactory application
      */
     public void onDeletion(org.wso2.carbon.appfactory.core.dto.Application application, String userName,
                            String tenantDomain) throws AppFactoryException {
+        AppFactoryConfiguration appfactoryConfiguration = AppFactoryUtil.getAppfactoryConfiguration();
+
+        String stratosServerURL = appfactoryConfiguration.getFirstProperty(
+                AppFactoryConstants.DEPLOYMENT_ENVIRONMENT + AppFactoryConstants.DOT_SEPERATOR +
+                AppFactoryConstants.ApplicationStage.DEVELOPMENT+ AppFactoryConstants.DOT_SEPERATOR +
+                AppFactoryConstants.TENANT_MGT_URL);
+
+        String  tenantUsername = application.getOwner();
+        StratosRestService restService = StratosRestService.getInstance(stratosServerURL, tenantUsername,
+                                                                        AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
+
+        int tenantId = -1;
+        try {
+            tenantId = Util.getRealmService().getTenantManager().getTenantId(tenantDomain);
+        } catch (UserStoreException e) {
+            throw new AppFactoryException("Error while getting tenantId for domain " + tenantDomain  , e);
+        }
+
         ApplicationTypeBean applicationTypeBean = ApplicationTypeManager.getInstance()
-                                                                        .getApplicationTypeBean(application.getType());
+                .getApplicationTypeBean(application.getType());
         if (applicationTypeBean == null) {
             throw new AppFactoryException(
                     "Application Type details cannot be found for Artifact Type : " + application.getType()
@@ -53,31 +69,19 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
         String runtimeNameForAppType = applicationTypeBean.getRuntimes()[0];
         RuntimeBean runtimeBean = RuntimeManager.getInstance().getRuntimeBean(runtimeNameForAppType);
 
-        JDBCAppVersionDAO appVersionDAO = JDBCAppVersionDAO.getInstance();
-        String[] versions = appVersionDAO.getAllVersionNamesOfApplication(application.getId());
-
-        AppFactoryConfiguration appfactoryConfiguration = AppFactoryUtil.getAppfactoryConfiguration();
-
-        String stratosServerURL = appfactoryConfiguration.getFirstProperty(
-                ENVIRONMENT + AppFactoryConstants.DOT_SEPERATOR + "Development" + AppFactoryConstants.DOT_SEPERATOR +
-                AppFactoryConstants.TENANT_MGT_URL);
-
-        String  tenantUsername = application.getOwner();
-        StratosRestService restService = new StratosRestService(stratosServerURL, tenantUsername, "nopassword");
-        
-        int tenantId = -1;
-        try {
-            tenantId = Util.getRealmService().getTenantManager().getTenantId(tenantDomain);
-        } catch (UserStoreException e) {
-            throw new AppFactoryException("Error while getting tenantId for domain " + tenantDomain  , e);
-        }
-
         RepositoryProvider repositoryProvider = org.wso2.carbon.appfactory.repository.mgt.internal.Util.
                                       getRepositoryProvider(application.getRepositoryType());
         String paasRepositoryUrlPattern = runtimeBean.getPaasRepositoryURLPattern();
+
+        JDBCAppVersionDAO appVersionDAO = JDBCAppVersionDAO.getInstance();
+        String[] versions = appVersionDAO.getAllVersionNamesOfApplication(application.getId());
+
         String stratosApplicationId;
+        //Iterating through app versions and deleting stratos resources
         for (String version : versions) {
-            stratosApplicationId = CloudUtils.generateUniqueStratosApplicationId(tenantId, application.getId(), version);
+            String stage = appVersionDAO.getAppVersionStage(application.getId(),version);
+            stratosApplicationId = CloudUtils.generateUniqueStratosApplicationId(tenantId, application.getId(), version,
+                                                                                 stage);
             restService.undeployApplication(stratosApplicationId);
             //TODO :
             // Have to wait till application get undeployed
@@ -92,14 +96,13 @@ public class SingleTenantApplicationEventListner extends ApplicationEventsHandle
 
             try {
                 repositoryProvider.deleteStratosArtifactRepository(CloudUtils.generateSingleTenantArtifactRepositoryName(
-                        paasRepositoryUrlPattern,appVersionDAO.getAppVersionStage(application.getId(),version),version,
-                        stratosApplicationId,tenantId));
+                        paasRepositoryUrlPattern, stage, version, stratosApplicationId,tenantId));
             } catch (RepositoryMgtException e) {
                log.error("Error while deleting stratos repository for application " + application.getId()
                          + " version :" + version);
                 //No need to throw since this is an artifact repo
             }
-        }      
+        }
     }
 
     @Override

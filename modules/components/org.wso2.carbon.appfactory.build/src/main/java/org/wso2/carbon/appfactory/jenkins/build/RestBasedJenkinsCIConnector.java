@@ -964,9 +964,6 @@ public class RestBasedJenkinsCIConnector {
 
             String paasRepositoryProviderClassName = appfactoryConfiguration.getFirstProperty(
                     AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME);
-            String stratosServerURL = appfactoryConfiguration.getFirstProperty(AppFactoryConstants.DEPLOYMENT_STAGES
-                                                                               + AppFactoryConstants.DOT_SEPERATOR + stage + AppFactoryConstants.DOT_SEPERATOR
-                                                                               + AppFactoryConstants.TENANT_MGT_URL);
 
             parameters.add(new BasicNameValuePair(AppFactoryConstants.TENANT_DOMAIN,tenantDomain));
             int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -976,7 +973,6 @@ public class RestBasedJenkinsCIConnector {
             parameters.add(new BasicNameValuePair(AppFactoryConstants.DEPLOY_STAGE, stage));
             parameters.add(new BasicNameValuePair(AppFactoryConstants.DEPLOY_ACTION, deployAction));
             parameters.add(new BasicNameValuePair(AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME,paasRepositoryProviderClassName));
-            parameters.add(new BasicNameValuePair(AppFactoryConstants.STRATOS_SERVER_URL,stratosServerURL));
 
 	        addAppTypeParameters(parameters, applicationTypeBean);
             addRunTimeParameters(stage, parameters, runtimeBean);

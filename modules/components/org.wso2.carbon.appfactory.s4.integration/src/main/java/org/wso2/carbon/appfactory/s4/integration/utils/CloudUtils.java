@@ -261,15 +261,17 @@ public class CloudUtils {
 
 	/**
 	 * Generate a UniqueId for single tenant applications using the following format
-     * {tenantId}-{applicationId}-{application-version}
+     * {tenantId}-{applicationId}-{application-version}-{stage}
 	 * @param tenantId
 	 * @param applicationId
 	 * @param version
 	 * @return
 	 */
-	public static String generateUniqueStratosApplicationId(int tenantId, String applicationId, String version){
-		return tenantId + AppFactoryConstants.HYPHEN + applicationId + AppFactoryConstants.HYPHEN +
-		       (version + "").replace(AppFactoryConstants.DOT,AppFactoryConstants.HYPHEN);
+	public static String generateUniqueStratosApplicationId(int tenantId, String applicationId, String version ,
+	                                                        String stage){
+		return tenantId + AppFactoryConstants.HYPHEN + applicationId + AppFactoryConstants.HYPHEN
+		       + (version + "").replace(AppFactoryConstants.DOT,AppFactoryConstants.HYPHEN) + AppFactoryConstants.HYPHEN
+		       + stage;
 	}
 
 	/**

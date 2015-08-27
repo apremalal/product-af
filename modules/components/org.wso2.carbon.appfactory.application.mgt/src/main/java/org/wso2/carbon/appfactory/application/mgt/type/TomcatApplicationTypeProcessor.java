@@ -51,22 +51,22 @@ public class TomcatApplicationTypeProcessor extends MavenBasedApplicationTypePro
                                                                            + AppFactoryConstants.DOT_SEPERATOR
                                                                            + stage + AppFactoryConstants.DOT_SEPERATOR
                                                                            + AppFactoryConstants.TENANT_MGT_URL);
-
         int tenantId ;
         try {
             tenantId =  Util.getRealmService().getTenantManager().getTenantId(tenantDomain);
         } catch (UserStoreException e) {
-            String errorMsg = "Unable to get tenant ID for tenant domain " + tenantDomain;
+            String errorMsg = "Unable to get tenant ID for tenant domain " + tenantDomain
+                              + " while getting deployed URL";
             log.error(errorMsg, e);
             throw new AppFactoryException(errorMsg, e);
         }
 
         String tenantUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        StratosRestService stratosRestService = new StratosRestService(stratosServerURL,tenantUsername,
-                                                                       AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
+        StratosRestService stratosRestService = StratosRestService.getInstance(stratosServerURL,tenantUsername,
+                                                                    AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
 
         String applicationInstanceJson =  stratosRestService.getApplicationRuntime(
-                   CloudUtils.generateUniqueStratosApplicationId(tenantId, applicationID, applicationVersion));
+                   CloudUtils.generateUniqueStratosApplicationId(tenantId, applicationID, applicationVersion,stage));
 
         JsonParser jsonParser = new JsonParser();
         JsonObject applicationInstanceObject = (JsonObject) jsonParser.parse(applicationInstanceJson);
@@ -75,10 +75,10 @@ public class TomcatApplicationTypeProcessor extends MavenBasedApplicationTypePro
         if(applicationInstanceJson != null && AppFactoryConstants.STRATOS_RUNTIME_STATUS_ACTIVE.
                                               equalsIgnoreCase(applicationInstanceObject.get("status").getAsString()))
         {
-            // getting the application service hostname from the application runtime JSON
-            serviceHostname =  applicationInstanceObject.get("applicationInstances").getAsJsonArray().get(0)
-                                                 .getAsJsonObject().get("clusterInstances").getAsJsonArray().get(0)
-                                                 .getAsJsonObject().get("hostNames").getAsJsonArray().get(0).getAsString();
+          // getting the application service hostname from the application runtime JSON
+          serviceHostname =  applicationInstanceObject.get("applicationInstances").getAsJsonArray().get(0)
+                  .getAsJsonObject().get("clusterInstances").getAsJsonArray().get(0)
+                  .getAsJsonObject().get("hostNames").getAsJsonArray().get(0).getAsString();
         }else{
             return null;
         }
@@ -93,9 +93,13 @@ public class TomcatApplicationTypeProcessor extends MavenBasedApplicationTypePro
         if(applicationVersion.equalsIgnoreCase(sourceTrunkVersionName)) {
             applicationVersion = artifactTrunkVersionName;
         }
-        launchURLPattern = launchURLPattern.replace(PARAM_APP_ID, applicationID).replace(PARAM_HOST_NAME,serviceHostname)
+        launchURLPattern = launchURLPattern.replace(PARAM_APP_ID, applicationID).replace(PARAM_HOST_NAME,
+                                                                                         serviceHostname)
                                            .replace(PARAM_APP_VERSION, applicationVersion);
-
+        if(log.isDebugEnabled()){
+         log.debug("Generated URL pattern for applicationID :" + applicationID + " version :" + applicationVersion
+                   + " stage : " + stage + " pattern : " + launchURLPattern);
+        }
         return launchURLPattern;
     }
 }

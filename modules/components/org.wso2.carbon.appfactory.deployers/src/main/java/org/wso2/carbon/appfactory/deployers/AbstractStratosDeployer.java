@@ -70,8 +70,8 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
 
 	        for (File artifactToDeploy : artifactsToDeploy) {
 		        String fileName = artifactToDeploy.getName();
-		        addToGitRepo(fileName, artifactToDeploy, parameters, artifactType, serverDeploymentPath, null,
-		                     tenantDomain,tenantId);
+		        addToGitRepo(fileName, artifactToDeploy, parameters, serverDeploymentPath, null, tenantDomain,
+                             tenantId);
 	        }
 
             if (notify) {
@@ -86,8 +86,7 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         }
     }
 
-    private void addToGitRepo(String fileName, File artifacts, Map metadata,
-                              String appTypeName, String serverDeploymentPath,
+    private void addToGitRepo(String fileName, File artifacts, Map metadata,String serverDeploymentPath,
                               String relativePathFragment,String tenantDomain,int tenantId) throws AppFactoryException {
         // subscribeOnDeployment is true or not
         boolean subscribeOnDeployment = Boolean.parseBoolean(
@@ -96,33 +95,16 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         String version = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.APPLICATION_VERSION);
         version = version.replaceAll("\\.+",AppFactoryConstants.MINUS);
         String baseRepoUrl = getBaseRepoUrl();
-        String generatedRepoName = generateRepoName(applicationId, version, metadata, tenantId, appTypeName, subscribeOnDeployment);
+        String generatedRepoName = generateRepoName(applicationId, version, metadata, tenantId, subscribeOnDeployment);
         String gitRepoUrl = baseRepoUrl +  AppFactoryConstants.GIT_REPOSITORY_CONTEXT + generatedRepoName;
         String stageName = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.DEPLOY_STAGE);
-
-        String cartridgeType = DeployerUtil.getParameter(metadata, AppFactoryConstants.APPLICATION_TYPE_CONFIG);
-        String cartridgeTypePrefix = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
-        String deploymentPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
-        String autoScalingPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_DEPLOYMENT_POLICY);
-        String tenantUsername = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.TENANT_USER_NAME);
 
         String applicationAdmin = getAdminUserName();
         String defaultPassword = getAdminPassword();
 
         // if subscribeOnDeployment is true create a git repo per application version
         if (subscribeOnDeployment) {
-            String paasRepoProviderClass = DeployerUtil.getParameter(metadata, AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME);
-            createStratosArticatRepository(paasRepoProviderClass,applicationAdmin,defaultPassword,generatedRepoName);
-
-            String uniqueStratosAppId = CloudUtils.generateUniqueStratosApplicationId(tenantId,applicationId,version);
-            StratosRestService stratosRestService = StratosRestService.getInstance(getStratosServerURL(),tenantUsername,
-                                                                                   AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
-            // Create stratos application only if it not created for the uniqueStratosAppId
-            if(!stratosRestService.isApplicationCreated(uniqueStratosAppId)){
-                stratosRestService.createApplication(uniqueStratosAppId, baseRepoUrl, tenantUsername, defaultPassword,
-                                                     cartridgeType, cartridgeTypePrefix,deploymentPolicy,autoScalingPolicy);
-                stratosRestService.deployApplication(uniqueStratosAppId);
-            }
+          doSubscribeOnDeployment(metadata,generatedRepoName,tenantId,applicationId,version,stageName);
         }
 
         // Create the temporary directory first. without this we can't proceed
@@ -305,8 +287,7 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         }
     }
 
-    private void copyFilesToGit(File sourceFile, File destinationFile)
-            throws AppFactoryException {
+    private void copyFilesToGit(File sourceFile, File destinationFile) throws AppFactoryException {
         try {
             if (sourceFile.isFile()) {
                 FileUtils.copyFile(sourceFile, destinationFile);
@@ -323,9 +304,8 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         }
     }
 
-    protected String generateRepoName(String applicationId, String version, Map metadata,
-                                      int tenantId, String appType, boolean subscribeOnDeployment)
-            throws AppFactoryException {
+    protected String generateRepoName(String applicationId, String version, Map metadata,int tenantId,
+                                      boolean subscribeOnDeployment) throws AppFactoryException {
         String paasRepositoryURLPattern = DeployerUtil.getParameter(metadata,
                                                                     AppFactoryConstants.PAAS_REPOSITORY_URL_PATTERN);
         String stage = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.DEPLOY_STAGE);
@@ -350,16 +330,41 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         return gitRepoName;
     }
 
-    /**
-     * Create a artifact repo using the specified repository provider
-     * @param repoProviderClassName
-     * @param adminUsername
-     * @param adminPassword
-     * @param repoName
-     * @return created repository url
-     * @throws AppFactoryException
-     */
-    private String createStratosArticatRepository(String repoProviderClassName, String adminUsername,
+    private void doSubscribeOnDeployment(Map metadata, String generatedRepoName, int tenantId, String applicationId,
+                                         String version, String stageName) throws AppFactoryException {
+
+        String cartridgeType = DeployerUtil.getParameter(metadata, AppFactoryConstants.APPLICATION_TYPE_CONFIG);
+        String cartridgeTypePrefix = DeployerUtil.getParameter(metadata,
+                                                               AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
+        String deploymentPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_CARTRIDGE_TYPE_PREFIX);
+        String autoScalingPolicy = DeployerUtil.getParameter(metadata, AppFactoryConstants.RUNTIME_DEPLOYMENT_POLICY);
+        String tenantUsername = DeployerUtil.getParameterValue(metadata, AppFactoryConstants.TENANT_USER_NAME);
+        String paasRepoProviderClass = DeployerUtil.getParameter(
+                                                   metadata, AppFactoryConstants.PAAS_ARTIFACT_REPO_PROVIDER_CLASS_NAME);
+
+        String stratosRepoPassword = getAdminPassword();
+        String stratosRepoUsernmae = getAdminUsername();
+        createStratosArticatRepository(paasRepoProviderClass, getAdminUsername(), stratosRepoPassword,
+                                       generatedRepoName);
+
+        String uniqueStratosAppId = CloudUtils.generateUniqueStratosApplicationId(tenantId, applicationId, version,
+                                                                                  stageName);
+        StratosRestService stratosRestService = StratosRestService.getInstance(
+                getStratosServerURL(), tenantUsername, AppFactoryConstants.STRATOS_REST_SERVICE_PASSWORD);
+        // Create stratos application only if it not created for the uniqueStratosAppId
+        if (!stratosRestService.isApplicationCreated(uniqueStratosAppId)) {
+            try {
+                stratosRestService.createApplication(uniqueStratosAppId, getBaseRepoUrl(), stratosRepoUsernmae,
+                                                     stratosRepoPassword, cartridgeType, cartridgeTypePrefix,
+                                                     deploymentPolicy, autoScalingPolicy);
+                stratosRestService.deployApplication(uniqueStratosAppId);
+            }catch(AppFactoryException e){
+                log.error("Subscribe on deployment was unsuccessful for applicationID : " + uniqueStratosAppId);
+            }
+        }
+    }
+
+    private void createStratosArticatRepository(String repoProviderClassName, String adminUsername,
                                                   String adminPassword, String repoName) throws AppFactoryException {
 
         ClassLoader loader = getClass().getClassLoader();
@@ -392,14 +397,11 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
         repoProvider.setAdminPassword(adminPassword);
         repoProvider.setRepoName(repoName);
         if(!repoProvider.isRepoExist())
-            return repoProvider.createRepository();
-        else
-            return null;
+            repoProvider.createRepository();
     }
 
     @Override
-    public void unDeployArtifact(Map<String, String[]> requestParameters)
-            throws Exception {
+    public void unDeployArtifact(Map<String, String[]> requestParameters) throws Exception {
         // To change body of implemented methods use File | Settings | File
         // Templates.
     }

@@ -143,7 +143,8 @@ public class NodejsApplicationTypeProcessor extends AbstractApplicationTypeProce
 
         StratosRestService restService =
                 new StratosRestService(serverURL, userName, StringUtils.EMPTY);
-        String clusterId = restService.getSubscribedCartridgeClusterId(cartridgeAlias);
+        //TODO : update to new stratos API
+        String clusterId = "";//restService.getSubscribedCartridgeClusterId(cartridgeAlias);
         JDBCApplicationDAO jdbcApplicationDAO = JDBCApplicationDAO.getInstance();
 
         try {
