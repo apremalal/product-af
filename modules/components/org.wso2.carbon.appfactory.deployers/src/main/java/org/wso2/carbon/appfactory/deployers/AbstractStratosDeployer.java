@@ -317,7 +317,7 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
             gitRepoName = CommonUtil.generateSingleTenantArtifactRepositoryName(paasRepositoryURLPattern,stage,version,
                                                                                 applicationId,tenantId);
         } else {
-            String repoFrom = DeployerUtil.getParameterValue(metadata,AppFactoryConstants.REPOSITORY_FROM);
+            String repoFrom = DeployerUtil.getParameterValue(metadata,AppFactoryConstants.BUILD_REPO_FROM);
             String preDevRepoNameAppender = "";
             // append _<username>, if the deployment repo is a forked one
             if(AppFactoryConstants.FORK_REPOSITORY.equals(repoFrom))
@@ -327,6 +327,10 @@ public abstract class AbstractStratosDeployer extends AbstractDeployer {
             gitRepoName = paasRepositoryURLPattern
                          + AppFactoryConstants.URL_SEPERATOR + tenantId + preDevRepoNameAppender;
             gitRepoName = gitRepoName.replace(AppFactoryConstants.STAGE_PLACE_HOLDER, stage);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Generated Git repository name : " + gitRepoName + " for application : " + applicationId);
         }
         return gitRepoName;
     }

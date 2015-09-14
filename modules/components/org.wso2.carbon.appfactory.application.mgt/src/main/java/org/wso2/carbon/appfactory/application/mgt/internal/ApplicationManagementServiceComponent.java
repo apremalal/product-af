@@ -16,9 +16,6 @@
 
 package org.wso2.carbon.appfactory.application.mgt.internal;
 
-import java.util.Dictionary;
-import java.util.Hashtable;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
@@ -29,19 +26,20 @@ import org.wso2.carbon.appfactory.application.mgt.listners.InitialArtifactDeploy
 import org.wso2.carbon.appfactory.application.mgt.listners.SingleTenantApplicationEventListner;
 import org.wso2.carbon.appfactory.application.mgt.listners.StatPublishEventsListener;
 import org.wso2.carbon.appfactory.application.mgt.service.ApplicationInfoService;
-import org.wso2.carbon.appfactory.application.mgt.service.ApplicationManagementService;
 import org.wso2.carbon.appfactory.application.mgt.service.ApplicationUserManagementService;
 import org.wso2.carbon.appfactory.application.mgt.util.Util;
 import org.wso2.carbon.appfactory.common.AppFactoryConfiguration;
 import org.wso2.carbon.appfactory.common.AppFactoryConstants;
 import org.wso2.carbon.appfactory.core.ApplicationEventsHandler;
 import org.wso2.carbon.appfactory.core.ContinuousIntegrationSystemDriver;
-import org.wso2.carbon.appfactory.jenkins.build.service.TenantContinousIntegrationSystemDriverService;
 import org.wso2.carbon.appfactory.nonbuild.NonBuildableApplicationEventListner;
 import org.wso2.carbon.appfactory.tenant.mgt.service.TenantManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ConfigurationContextService;
+
+import java.util.Dictionary;
+import java.util.Hashtable;
 
 /**
  * @scr.component name="org.wso2.carbon.appfactory.user.registration" immediate="true"
@@ -78,11 +76,6 @@ import org.wso2.carbon.utils.ConfigurationContextService;
  * cardinality="0..1" policy="dynamic"
  * bind="setTenantManagementService"
  * unbind="unsetTenantManagementService"
- * @scr.reference name="appfactory.tenant.continuous.integration"
- * interface="org.wso2.carbon.appfactory.jenkins.build.service.TenantContinousIntegrationSystemDriverService"
- * cardinality="0..1" policy="dynamic"
- * bind="setTenantContinousIntegrationSystemDriverService"
- * unbind="unsetTenantContinousIntegrationSystemDriverService"
  */
 public class ApplicationManagementServiceComponent {
     private static Log log = LogFactory.getLog(ApplicationManagementServiceComponent.class);
@@ -245,12 +238,4 @@ public class ApplicationManagementServiceComponent {
     public static void unsetTenantManagementService(TenantManagementService tenantManagementService) {
         Util.setTenantManagementService(null);
     }
-    
-    public static void setTenantContinousIntegrationSystemDriverService(TenantContinousIntegrationSystemDriverService tenantContinousIntegrationSystemDriverService) {
-		Util.setTenantContinousIntegrationSystemDriverService(tenantContinousIntegrationSystemDriverService);
-	}
-
-	public static void unsetTenantContinousIntegrationSystemDriverService(TenantContinousIntegrationSystemDriverService tenantContinousIntegrationSystemDriverService) {
-		Util.setContinuousIntegrationSystemDriver(null);
-	}
 }

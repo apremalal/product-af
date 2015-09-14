@@ -31,11 +31,10 @@
 	<dataSource>jdbc/WSO2CarbonDB</dataSource>	
     </dbConfig>
 
-    <dbConfig name="governance">
-	    <dataSource>jdbc/governance</dataSource>
-    </dbConfig>
-
     <%- database = @registry_database -%>
+    <dbConfig name="governance">
+	<dataSource>jdbc/governance</dataSource>
+    </dbConfig>
     <remoteInstance url="https://registryernance.cloud-test.wso2.com">
         <id>governance</id>
         <dbConfig>governance</dbConfig>
@@ -49,30 +48,23 @@
         <targetPath>/_system/governance</targetPath>
     </mount>
 
+    <%- database = @config_database -%>
     <dbConfig name="config">
-        <dataSource>jdbc/config</dataSource>
+    	<dataSource>jdbc/<%= @config_db %></dataSource>
     </dbConfig>
-
-     <%- database = @af_config_database -%>
     <remoteInstance url="https://registryernance.cloud-test.wso2.com">
         <id>config</id>
         <dbConfig>config</dbConfig>
         <readOnly>false</readOnly>
         <registryRoot>/</registryRoot>
         <enableCache>true</enableCache>
-        <cacheId><%= database[2] %>@jdbc:mysql://<%= database[0] %>:3306/<%= database[1] %></cacheId>
+        <cacheId><%= database[2] %>@jdbc:mysql://<%= database[0] %>:3306/<%= @config_db %></cacheId>
     </remoteInstance>
     <mount path="/_system/config" overwrite="virtual">
         <instanceId>config</instanceId>
         <targetPath>/_system/config</targetPath>
     </mount>
 
-    <!-- 
-    <mount path="/_system/governance/dependencies" overwrite="true">
-        <instanceId>governance</instanceId>
-        <targetPath>/_system/governance/dependencies/${stage}</targetPath>
-    </mount>
-    -->
    <!--<handler class="org.wso2.carbon.registry.extensions.handlers.SynapseRepositoryHandler">
         <filter class="org.wso2.carbon.registry.core.jdbc.handlers.filters.MediaTypeMatcher">
             <property name="mediaType">application/vnd.apache.synapse</property>
@@ -127,7 +119,8 @@
         <instanceId>instanceid</instanceId>
         <targetPath>/_system/nodes</targetPath>
     </mount-->
-    <!--metadataProviders>
+
+    <metadataProviders>
         <baseProviders>
             <provider mediaType="vnd.wso2.service/http+xml;version=1"
                       versionMediaType="vnd.wso2.version/service+xml;version=1"
@@ -148,7 +141,7 @@
             <provider mediaType="vnd.wso2.version/endpoint+xml;version=1"
                       class="org.wso2.carbon.registry.metadata.provider.version.GenericVersionProviderV1"/>
         </versionBaseProviders>
-    </metadataProviders-->
+    </metadataProviders>
     <!-- This defines index configuration which is used in meta data search feature of the registry -->
     <indexingConfiguration>
         <startingDelayInSeconds>60</startingDelayInSeconds>
@@ -165,6 +158,7 @@
                      mediaTypeRegEx="vnd.wso2.(.)+/(.)+"/>
             <indexer class="org.wso2.carbon.governance.registry.extensions.indexers.RXTIndexer" 
 		     mediaTypeRegEx="application/vnd.(.)+\+xml"/>
+
         </indexers>
         <exclusions>
             <exclusion pathRegEx="/_system/config/repository/dashboards/gadgets/swfobject1-5/.*[.]html"/>

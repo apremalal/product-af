@@ -90,6 +90,7 @@ public class AppFactoryConstants {
 	public static final String BUILD_STATUS_UNKNOWN = "Unknown";
 	public static final String BUILD_STATUS_BUILDING = "Building";
 	public static final String JOB_NAME_KEY = "name";
+	public static final String JOB_TAG_NAME = "job";
 
 	/*
 	*  constants for cartridge subscription info
