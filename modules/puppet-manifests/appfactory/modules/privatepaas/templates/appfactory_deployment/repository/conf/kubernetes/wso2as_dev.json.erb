@@ -2,7 +2,7 @@
     "type": "<%=@dev_cartridge_type %>",
     "provider": "wso2",
     "category": "framework",
-    "host": "<%= @domain %>",
+    "host": "as.stratos.org",
     "displayName": "WSO2AS",
     "description": "WSO2 App Server",
     "version": "5.2.1",
@@ -13,7 +13,7 @@
             "name": "http-9763",
             "protocol": "http",
             "port": "9763",
-            "proxyPort": "80",
+            "proxyPort": "0",
             "kubernetesPortType": "NodePort"
 
         },
@@ -21,7 +21,7 @@
             "name": "http-9443",
             "protocol": "https",
             "port": "9443",
-            "proxyPort": "443",
+            "proxyPort": "0",
             "kubernetesPortType": "NodePort"
         }
 
@@ -51,10 +51,6 @@
         {
             "name": "KUBERNETES_SERVICE_SESSION_AFFINITY",
             "value": "ClientIP"
-        },
-        {
-            "name": "payload_parameter.STAGE",
-            "value": "Development"
         },
         {
             "name": "payload_parameter.START_CMD",
@@ -105,7 +101,7 @@
          },
          {
            "name": "payload_parameter.CONFIG_PARAM_WORKER_HOST_NAME",
-           "value": "<%= dev_app_id %>.<%= @domain %>"
+           "value": "appserver.dev.<%= @domain %>"
          },
          {
             "name": "payload_parameter.S2GIT_IP",
@@ -114,70 +110,7 @@
          {
            "name": "payload_parameter.S2GIT_DOMAIN",
            "value": "s2git.<%= @domain %>"
-         },
-         {
-           "name": "payload_parameter.APPFAC_IP",
-           "value": "<%= @ipaddress %>"
-         },
-         {
-           "name": "payload_parameter.APPFAC_DOMAIN",
-           "value": "apps.<%= @domain %>"
-         },
-         {
-             "name": "payload_parameter.PPAAS_MB_IP",
-             "value": "<%= @ipaddress %>"
-         },
-         {
-             "name": "payload_parameter.PPAAS_MB_PORT",
-             "value": "61616"
-         },
-         {
-             "name": "payload_parameter.BAM_IP",
-             "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.BAM_DOMAIN",
-            "value": "bam.<%= @domain %>"
-         },
-         {
-            "name": "payload_parameter.THRIFT_IP",
-            "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.THRIFT_DOMAIN",
-            "value": "receiver1.<%= @domain %>"
-         },
-         {
-            "name": "payload_parameter.MESSAGING_IP",
-            "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.MESSAGING_DOMAIN",
-            "value": "messaging.<%= @domain %>"
-         },
-         {
-            "name": "payload_parameter.SOCIAL_IP",
-            "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.SOCIAL_DOMAIN",
-            "value": "social.<%= @domain %>"
-         },
-         {
-            "name": "payload_parameter.LB_IP",
-            "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.LB_DOMAIN",
-            "value": "appfactoryelb.<%= @domain %>"
-         },
-         {
-            "name": "payload_parameter.MYSQL_IP",
-            "value": "<%= @ipaddress %>"
-         },
-         {
-            "name": "payload_parameter.MYSQL_DOMAIN",
-            "value": "mysql.<%= @domain %>"
          }
+
     ]
 }

@@ -26,7 +26,9 @@ node basenode {
   $mb_offset        = 300
   $gitblit_offset   = 0
   $s2gitbit_offset  = 1
-  $stratos_offset  = 20
+  $dev_paas_offset  = 20
+  $test_paas_offset = 21
+  $prod_paas_offset = 22
   $dev_greg_offset  = 30
   $test_greg_offset = 31
   $prod_greg_offset = 32
@@ -50,7 +52,14 @@ node basenode {
   $apim_port        = 9443 + $apim_offset
   $task_port         = $af_port
 
-  $stratos_port    = 9443 + $stratos_offset
+  $dev_paas_port    = 9443 + $dev_paas_offset
+  $dev_paas_mb_port = 61616 + $dev_paas_offset
+
+  $test_paas_port   = 9443 + $test_paas_offset
+  $test_paas_mb_port = 61616 + $test_paas_offset
+
+  $prod_paas_port   = 9443 + $prod_paas_offset
+  $prod_paas_mb_port = 61616 + $prod_paas_offset
 
   $dev_greg_port    = 9443 + $dev_greg_offset
   $test_greg_port    = 9443 + $test_greg_offset
@@ -58,8 +67,6 @@ node basenode {
 
   $ipaddress = $appfac_ip
   $mysql_server_1 = $ipaddress
-  $kubernetes_host_ip = $kubernetes_host
-  $kubernetes_port = $kubernetes_port
 
 # Jenkins Configs
   $jenkins_keystore_name = "/mnt/${ipaddress}/jenkins/security/wso2carbon.jks"
@@ -147,11 +154,17 @@ node basenode {
     "$ipaddress,receiver1.${domain}",
     "$ipaddress,node0.cassandra.${domain}",
     "$ipaddress,hadoop0.${domain}",
+    "$ipaddress,sc.dev.${domain}",
+    "$ipaddress,sc.test.${domain}",
+    "$ipaddress,sc.prod.${domain}",
     "$ipaddress,sc.${domain}",
     "$ipaddress,paas.${domain}",
     "$ipaddress,cc.stratos.apache.org",
     "$ipaddress,as.stratos.apache.org",
     "$ipaddress,autoscaler.stratos.apache.org",
+    "192.168.18.242,appserver.dev.${domain}",
+    "192.168.18.244,appserver.test.${domain}",
+    "192.168.18.246,appserver.${domain}",
     "$ipaddress,mysql-dev-01.${domain}",
     "$ipaddress,mysql-test-01.${domain}",
     "$ipaddress,mysql-prod-01.${domain}",
@@ -348,28 +361,9 @@ node confignode inherits basenode  {
   $jenkins_admin_user         = "jenkinssystemadmin"
   $jenkins_admin_password     = "password"
 
-#AF stratos application information
-
-  $app_id_prefix      = "as"
-
-#Dev
-  $dev_app_id               = "${app_id_prefix}development"
-
-#Test
-  $test_app_id              = "${app_id_prefix}testing"
-
-#Prod
-  $prod_app_id              = "${app_id_prefix}production"
-
 #AF stratos cartridge information
   $deployment_policy    = "af-deployment"
   $autoscale_policy     = "economy"
-
-#Single Tenant Applicatoin configs
-  $single_tenant_application_policy_id = "application-policy-st"
-
-  $autoscaling_policy_id = "autoscaling-policy"
-  $deployment_policy_id = "deployment-policy"
 
   $appserver_cartridge_alias_prefix      = "as"
   $appserver_cartridge_type_prefix       = "${dev_id}as"
@@ -486,8 +480,13 @@ $apimgt_http_port     = "9769" # we put this because for minimal deployment we u
   $s2gitbit_https_port  = 8443 + $s2gitbit_offset
   $s2gitblit_server     = "s2git.${wso2_env_domain}"
   $s2gitblit_https_port_enabled =false
-  $stratos_server   = "sc.${wso2_env_domain}"
-  $stratos_server_port = $stratos_port
+  $adc_server_domain    = "sc.${wso2_env_domain}"
+  $stratos_dev_server   = "sc.dev.${wso2_env_domain}"
+  $stratos_test_server  = "sc.test.${wso2_env_domain}"
+  $stratos_prod_server  = "sc.prod.${wso2_env_domain}"
+  $stratos_dev_server_port = $dev_paas_port
+  $stratos_test_server_port = $test_paas_port
+  $stratos_prod_server_port = $prod_paas_port
   $adc_server_port      = '9463'
   $s2gitblit_server_port= '8444'
   $s2git_adminusername  = 'admin'
@@ -587,6 +586,15 @@ $iaas_instance_flavour= "7"
   $ppaas_mysql_port     = "3306"
   $ppaas_mysql_uname    = "root"
   $ppaas_mysql_password = "root"
+
+#### private paas application server node configs ##########
+#### [<as_stage> , <server_key>, <as_stage_prefix>, <mysql_server> <mb_ip> <mb_port> <userstore> <registry>]
+  #$ppaas_as_nodes = {
+  #  "$dev_cartridge_type"  => ['Development','DEV_AS','dev', $ipaddress, $ipaddress,$dev_paas_mb_port, $dev_userstore, $dev_registry_db_schema],
+  #  "$test_cartridge_type" => ['Testing','TEST_AS','test', $ipaddress, $ipaddress, $test_paas_mb_port, $test_userstore, $test_registry_db_schema],
+  #  "$prod_cartridge_type" => ['Production','PROD_AS','prod', $ipaddress, $ipaddress, $prod_paas_mb_port, $prod_userstore, $prod_registry_db_schema]
+  #}
+
 
 #Private paas basenode configs
   $ppaas_mb_ip            = $ipaddress #Need to configure for each environment
@@ -1088,23 +1096,14 @@ node /ppaas/ inherits confignode {
     group              => $group,
     target             => "/mnt/${server_ip}/ppaas",
     ppaas_mysql_host   => $ppaas_mysql_host,
-    offset             => $stratos_offset,
+    offset             => $dev_paas_offset,
     registry_db_schema => $ppaas_registry_db_schema,
     user_store         => $ppaas_userstore,
     config_db_schema   => $ppaas_config_db_schema
   }
 }
 
-node /nginx/ inherits confignode {
-  $server_ip = $ipaddress
 
-  class { "nginx":
-    owner              => "root",
-    group              => $group,
-    target             => "/mnt/${server_ip}/nginx",
-    ext_version        => "4.1.2"
-  }
-}
 #########################################
 ###### END of the production setup ######
 #########################################

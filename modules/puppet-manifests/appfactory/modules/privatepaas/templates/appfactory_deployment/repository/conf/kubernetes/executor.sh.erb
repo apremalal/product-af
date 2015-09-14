@@ -16,15 +16,11 @@
     curl -X POST -H "Content-Type: application/json" -d @"wso2as_test.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/cartridges
     curl -X POST -H "Content-Type: application/json" -d @"wso2as_prod.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/cartridges
 
-    echo "Adding tomcat cartridge..."
-    curl -X POST -H "Content-Type: application/json" -d @"tomcat.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/cartridges
-
     sleep 1
     echo "Adding application policy..."
     curl -X POST -H "Content-Type: application/json" -d @"application-policy_dev.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
     curl -X POST -H "Content-Type: application/json" -d @"application-policy_test.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
     curl -X POST -H "Content-Type: application/json" -d @"application-policy_prod.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
-    curl -X POST -H "Content-Type: application/json" -d @"application-policy-st.json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applicationPolicies
 
     sleep 1
     echo "Adding application..."
@@ -34,6 +30,6 @@
 
     sleep 1
     echo "Deploying application..."
-    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@dev_app_id %>/deploy/application-policy_dev
-    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@test_app_id %>/deploy/application-policy_test
-    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@prod_app_id %>/deploy/application-policy_prod
+    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@dev_cartridge_alias %>/deploy/application-policy_dev
+    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@test_cartridge_alias %>/deploy/application-policy_test
+    curl -X POST -H "Content-Type: application/json" -k -v -u <%=@usrmgt_username %>:<%=@usrmgt_password %> https://localhost:<%= 9443 + Integer(@offset) %>/api/applications/<%=@prod_cartridge_alias %>/deploy/application-policy_prod
